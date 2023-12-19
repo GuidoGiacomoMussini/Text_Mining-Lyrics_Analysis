@@ -43,7 +43,7 @@ This text was used to train a classification algorithm that can recognize whethe
 In this part, the text has been cleaned as the lyrics: comments, punctuation and non-ASCII symbols were removed. 
 Then, the dataset used to train the classification algorithm was then built: it contains 2 columns, the first one contains the last word of each verse, the other column contains a numerical indication for the rhyme strucutre: ABA BCB CDC -> 010 121 232.
 
-# Topic Detection
+## 3-Topic Detection
 The functions related to this script are in the topic_detection.py file.
 
 In this section, i have tried to cluster the songs with respect to the main topic covered. initially, the idea was to further specialize the model, to train it to generate a song according to both an author's style and the topic covered.
@@ -111,7 +111,7 @@ The other first places, however, are occupied by songs about faith or God, Topic
 It might be interesting to try to adapt the method to handle the similarity calculation more precisely, perhaps trying to find an alternative way in defining the weights
 
 
-# 4-Rhyme Model
+## 4-Rhyme Model
 This script trains a model that can recognize whether 2 words rhyme. 
 There are no specialized libraries to perform this task, one can adapt libraries such as NLTK or pyphen, or use some methods based on transforming words into their phonetic representation, but still they are not 100% accurate. For this reason I preferred to build a model optimized on the Italian language. 
 The model is not perfect:
@@ -128,7 +128,43 @@ The model used to perform this classification task is a feedforward neural netwo
 
 for the future it may be interesting to develop this model by enriching the dataset and improving the model.
 
-# 5 Masked Language Models
+## 5 Masked Language Models
+The initial objective of this work was to try to generate lyrics following the style of a certain author, to try to rewrite a song by author A, following the style of singer-songwriter B.
+In the first part of this discussion i've altready mentioned the 'POS to TEXT' translation model that wasn't able to provide any significant result. 
+Another model that i've tried to implemet follow a similar logic: the idea was to train a trasformer to 'translate' a lemmatized (and after stopwords removal) text to a normal text: for example: 'binario stare locomotiva' -> 'e sul binario stava la locomotiva'. The aim was to capture the way in which a given author composes the phrases, but again i didn't have sufficient examples to obtain meaningful results. 
+
+I did not use data augmentation techniques to enrich the dataset as changing the lyrics of a song by, for example, using synonyms, can alter the structure of the lyrics.
+
+The solution i found uses a Masked Language Model(MLM). It did not bring satisfactory results in absolute terms, but in any case they are the best I was able to obtain from these data. 
+A Masked laungage model take as input a string 'evaporato in una nuvola rossa' where one of the word is masked by a special token [MASK] -> 'evaporato in una [MASK] rossa', the task of this class of models is to predict the word masked by [MASK]. 'nebbia', 'foschia', 'nuvola', 'notte', for example. 
+my idea is to sequentially use an MLM on a sentence, to transform it according to what the model has learned. 
+
+#### Training. 
+I used the [BERT-'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as a basis. 
+Then i selected one author, let's say De André, and i've extracted all the verses of all of his songs. 
+I had to work on verse-level since i didn't have evidence of the strophe for all the lyrics, and work at lyric-level was computationally too costly.
+I built the dataset by sequentially replacing each word of each verse with the special token, for example: 
+ | |
+|---|
+|'[MASK] in una nuvola rossa'
+ 'evaporato [MASK] una nuvola rossa'
+ xz'+sxcevaporato in [MASK] nuvola rossa'
+ 'evaporato in una [MASK] rossa'
+ 'evaporato in una nuvola [MASK]'|
+the label of each of these input was the complete phrase 'evaporato in una nuvola rossa'
+I then used this dataset to fine-tune the BERT model. 
+
+One can even filter the data by the topic defined before.
+
+#### Generation 
+The generation of text is an iterative process, shortly:
+Assume that we have a verse of another author: 'ma se io avessi previsto tutto questo'
+The first step is to mask the first element: phrase_1 = '[MASK] se io avessi previsto tutto questo'
+phrase_1 is the input of the BERT model, which returns, for example: phrase_2 ='e se io avessi previsto tutto questo' 
+Then we mask the second element of the output of BERT, phrase_2: 'e [MASK] io avessi previsto tutto questo'. 
+The process is repeated iteratively for each element of the verse, trasforming it in a different verse.
+
+
 
 
 
