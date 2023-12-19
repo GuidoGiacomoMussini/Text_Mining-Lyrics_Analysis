@@ -140,7 +140,7 @@ A Masked laungage model take as input a string 'evaporato in una nuvola rossa' w
 my idea is to sequentially use an MLM on a sentence, to transform it according to what the model has learned. 
 
 #### Training. 
-I used the [BERT-'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as a basis. 
+I used the [BERT for MLM-'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as a basis. 
 Then i selected one author, let's say De André, and i've extracted all the verses of all of his songs. 
 I had to work on verse-level since i didn't have evidence of the strophe for all the lyrics, and work at lyric-level was computationally too costly.
 I built the dataset by sequentially replacing each word of each verse with the special token, for example: 
@@ -148,21 +148,35 @@ I built the dataset by sequentially replacing each word of each verse with the s
 |---|
 |'[MASK] in una nuvola rossa'
  'evaporato [MASK] una nuvola rossa'
- xz'+sxcevaporato in [MASK] nuvola rossa'
+ 'evaporato in [MASK] nuvola rossa'
  'evaporato in una [MASK] rossa'
  'evaporato in una nuvola [MASK]'|
+
+
 the label of each of these input was the complete phrase 'evaporato in una nuvola rossa'
 I then used this dataset to fine-tune the BERT model. 
 
 One can even filter the data by the topic defined before.
 
 #### Generation 
-The generation of text is an iterative process, shortly:
-Assume that we have a verse of another author: 'ma se io avessi previsto tutto questo'
-The first step is to mask the first element: phrase_1 = '[MASK] se io avessi previsto tutto questo'
-phrase_1 is the input of the BERT model, which returns, for example: phrase_2 ='e se io avessi previsto tutto questo' 
-Then we mask the second element of the output of BERT, phrase_2: 'e [MASK] io avessi previsto tutto questo'. 
-The process is repeated iteratively for each element of the verse, trasforming it in a different verse.
+The generation of text is an iterative process, i've defined a base method and a more complex one. 
+Assume a verse of an author (ideally, different from the author used for fine-tuning), i.e: 'ma se io avessi previsto tutto questo'
+The base method is: 
+1. select a song
+2. The first step is to mask the first element: phrase_1 = '[MASK] se io avessi previsto tutto questo'
+3. phrase_1 is the input of the BERT model, which returns, for example: phrase_2 ='e se io avessi previsto tutto questo' 
+4. Then we mask the second element of the output of MLM_BERT, phrase_2: 'e [MASK] io avessi previsto tutto questo'. 
+5. The process is repeated iteratively for each element of the verse, trasforming it in a different verse.
+6. repeat the process for each verse in the song
+
+This procedure has the advantage of exploiting MLM_BERT to iteratively fill the masked words, in doing so, at each step it manages to capture the context of the input-verse and at the same time modify it following what it has learned in the fine tuning. On the other hand, it is not capable to manage the rhymes structure. 
+
+I've used the Rhyme Model defined above to extract the rhyme structure of the chosen song, that is a list like [0,1,0,1,2,3,2,3]. 
+
+An interesting feature of MLM_BERT is that it allows you to extract the list of words taken into account at each iteration to replace the [MASK]. 
+
+In the code, i've used this extraction combined the rhyme structure, to bound the extraction of the last word of each verse to the words that rhymes in the right structure.
+Obviously, the number of 'meaningful' possible replacement is limited and it is not always possible to find a word that possesses the desired characteristics. 
 
 
 
