@@ -44,6 +44,97 @@ In this part, the text has been cleaned as the lyrics: comments, punctuation and
 Then, the dataset used to train the classification algorithm was then built: it contains 2 columns, the first one contains the last word of each verse, the other column contains a numerical indication for the rhyme strucutre: ABA BCB CDC -> 010 121 232.
 
 # Topic Detection
+The functions related to this script are in the topic_detection.py file.
+
+In this section, i have tried to cluster the songs with respect to the main topic covered. initially, the idea was to further specialize the model, to train it to generate a song according to both an author's style and the topic covered.
+
+The most common method of achieving this is the Latent Dirichlet Allocation (LDA), however, in this particular case this algorithm did not produce significant results, probably due to the type of documents. Moreover i don't have any labels regarding the topics, so i couldn't use any type of supervised algorithm. 
+To overcome this problem, i defined my own topic classification algorithm. The algorithm is based on the concept of [FastText](https://fasttext.cc/) similarity. Fasttext is a library developed by facebook, which contains useful tools for NLP. In particular, i exploit its pre-trained Italian word embedding model to derive the cosine similarity between the vector representation of two given words: S(x,y) where x,y are the words.
+
+#### FastText Classification Algorithm. 
+This algorithm requires defining the topics to which the texts are to be assigned. I used single words to define a topic, but it is easy to generalize the method to accept a list of words representing a topic. 
+I decided to define 6 topics: 'amore', 'dio', 'natura', 'politica', 'morte', 'guerra'.  
+Since the similarity measure take as inputs 2 words, you have to decide which words of each document have to be choosen to calculate it. The words that best represent a text are the NOUNs, which were extracted from each lemmatized text, you can choose to include other part of speech like ADJs or VERBs. In the final version of the script i used only the 10 most common NOUNs in each text, but the results are very similar.
+
+Assuming $A$ and $T$ are the list of words in a document and Topic, respectively. Where each element in $A$ is denoted as $ a_i$ and each element in $T$ is denoted as $t_j$.
+Let $S(x, y)$ be the cosine similarity between the vectorial representation of the words $x$ and $y$.
+
+The algorithm involves calculating the similarity between each word $a_i$ in $A$ and each topic $t_j$ in $T$. The document is assigned to the topic $t_k$ such that the sum of similarities between $t_k$ and all words in $A$ is greater than the sum of similarities between $t_j$ and all words in $A$, where $t_j$ belongs to $T \setminus \{ t_k \}$.
+
+Mathematically, this can be expressed as:
+$$ t_k = \underset{t_j \in T}{\arg \max} \sum_{i=1}^{|A|} S(a_i, t_j)w_j > \sum_{i=1}^{|A|} S(a_i, t_k)w_k $$
+This notation signifies that we find the topic $t_k$ that maximizes the sum of similarities between $t_k$ and all words in $A$, ensuring it is greater than the sum of similarities between $t_j$ and all words in $A$ for any $t_j$ in $T \setminus \{ t_k \}$.
+
+The terms $w_j$, $w_k$  $\in [0,1]$ refer to a metric that i've called **Self Similarity**:
+Self-similarity of a word represents how common the word is within the language. 
+Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency in the dataset used to train the embedding model. Under the assumption that the words distribution in the datset is consisent with the words distribution in the language, we have that $P(S(c,x) > S(n,x))$ is probable for each x $\in$ X while recognizing no direct semantic or lexical link between $c$ and $x$.  
+In other words, S(x,y) inherently tends to calculate a higher similarity score when a common word is involved. This bias leads the algorithm to frequently assign documents to topics represented by the most common term. 
+
+To counteract this effect, the algorithm derives *self-similarity* coefficient $w_t$ for each topic t in T, defined as: $$ w_t ∝  (\sum_{i=1}^{|L|} S(l_i, t_t))^{-1} $$ Here, $L$
+is the list of each chosen word $l$ across all documents. *Note that each $w_t$ is taken in percentage, based on the sum of all the w_t in T. Tt follows that as T increases, each $w_t$ decreases.*
+So this coefficeint is proportional to the inverse of how 'popular' is the word representing the topic in the set of documents.
+For example, the popularity of topics in the lyrics of my songs is:
+ | |
+|---|
+|'dio': 0.32,
+ 'amore': 0.186,
+ 'morte': 0.162,
+ 'guerra': 0.124,
+ 'natura': 0.123,
+ 'politica': 0.085|
+
+The self similarity score is nothing but (popularity score)^{-1}. Therefore, the most *self-similar* topics are penalized in the algorithm.
+
+An interesting aspect of this procedure is that it allows the extraction of the 'percentage belonging' of a text to each topic. This shows how much a text is related to a single topic or whether it spaces between different topics, for example, the topic distribution for the song 'Il testamento di Tito' is: 
+ | |
+|---|
+|'dio': 0.206,
+ 'amore': 0.18,
+ 'morte': 0.176,
+ 'natura': 0.154,
+ 'guerra': 0.147,
+ 'politica': 0.136|
+
+ Note that even if 'dio' is the most penalized topic, it were in any case assigned to the given song (and it is a perfectly justified assignment)
+
+
+#### Song Similarity
+The same logic can be adapted to find the most similar songs: 
+In this case it is important to consider the same number of words for each song: since the algorithm is not designed to weigh the lengths of the input lists, songs with more words would be advantaged in the calculation, as the final score is the result of a simple sum between the similarities of each possible word pair of 2 songs. 
+
+One aspect that deserves attention in this context is the impossibility of creating self-similarity weights. Since the 'topics' are every possible word in the whole set of songs, the popularity coefficient of each word would be flattened to zero by the cardinality of the set, making the self-similarity weights tend to infinity by contrast. 
+
+In this regard, it may be interesting to read the results obtained (found on the script) 
+It can be seen that the most similar songs were indentified in dialect songs, probably due to problems in the handling of such words by the embedding model. 
+The other first places, however, are occupied by songs about faith or God, Topic which, before adding self-similarity, I have seen to be the one that generates the most bias in the similarity calculation.
+
+It might be interesting to try to adapt the method to handle the similarity calculation more precisely, perhaps trying to find an alternative way in defining the weights
+
+
+# 4-Rhyme Model
+This script trains a model that can recognize whether 2 words rhyme. 
+There are no specialized libraries to perform this task, one can adapt libraries such as NLTK or pyphen, or use some methods based on transforming words into their phonetic representation, but still they are not 100% accurate. For this reason I preferred to build a model optimized on the Italian language. 
+The model is not perfect:
+* It makes errors -it reached only 90% accuracy on the test set-
+* It is trained only on the Divina Commedia, which although it may be a good starting point, is definitely not enough to capture all the nuances and possible cases, especially in a language as complex as Italian.
+
+The script import the dataset defined in the 'preprocessing' section, in which each row contains 3 (due to the rhyme structure) words that rhymes.
+For each word trio, i've built 6 new rows in the training dataset: containing the 6 possible combinations of pairs (w1,w2,w3 -> w1-w2, w1-w3, w2-w3 and the reversed pairs). 
+I added to the training dataset 1.5*len(training_dataset) example of words that don't rhyme ( Note that the extraction was done randomly, so it is possible that false negatives were generated at this stage)
+The training dataset contains then the label, which is a binary variable such that is 0 if the two words rhymes, 1 otherwise.
+In conclusion of this part, i considered only the last 3 letters of each words in the training dataset. An example of row can therefore be: ('ito' - 'iro' - 0) or ('are'-'iso' - 1). 
+
+The model used to perform this classification task is a feedforward neural network with a sigmoid activation function in the last layer. Two words were considered to rhyme if the output of this model is < 0.5.
+
+for the future it may be interesting to develop this model by enriching the dataset and improving the model.
+
+# 5 Masked Language Models
+
+
+
+ 
+ 
+
 
 
 
