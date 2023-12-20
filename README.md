@@ -24,7 +24,7 @@ The first one is related to the Lyrics-preprocessing, the second one to the Bibl
 *One of my first idea was to turn this problem into a 'translation' problem, a task excellently performed by transformers. The project, in a nutshell, was to create 2 models:   
 The first one with the task of learning the writing style of a given author by analyzing his lyrics POS (part of speech) using an RNN or markov chain.   
 The second one, a transformer model capable of translating a sequence of POS into written text. This second model would have been pretrained using Bible verses and then specialized on the lyrics of a second author.   
-Thus, the idea was to use the syntax of one author and the semantics of the other. Unfortunately the models provided very poor results.
+Thus, the idea was to use the syntax of one author and the semantics of the other. Unfortunately the models provided very poor results.*
 
 #### Lyrics preprocessing
 First of all, the lyrics obtained by Genius contained comments (i.e the phrase '*you might also like*' in the middle of almost each song) and headers that have to be removed. Here an example: 
