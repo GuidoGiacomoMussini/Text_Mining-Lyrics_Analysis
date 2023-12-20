@@ -58,12 +58,12 @@ The functions related to this script are in the topic_detection.py file.
 
 In this section, i have tried to cluster the songs with respect to the main topic covered. Initially, the idea was to further specialize the model to generate a song according to both an author's style and the topic covered.    
 The most common method to perform this taks, is the Latent Dirichlet Allocation (LDA), however, in this particular case this solution did not produce significant results. Moreover I didn't have any labels regarding the topics, so I couldn't use any supervised algorithm.  
-To overcome this problem, I defined my own topic classification algorithm. The algorithm is based on the concept of [FastText](https://fasttext.cc/) similarity. FastText is a library developed by facebook, which contains useful tools for NLP. In particular, I exploited its pre-trained Italian word embedding model to derive the absolute value of the cosine similarity between the vector representation of two given words:   $S(x,y)$ is therefore called FastText similarity, where x,y are the vectorial representation of 2 words.  
+To overcome this problem, I defined my own topic classification algorithm. The algorithm is based on the concept of [FastText](https://fasttext.cc/) similarity. FastText is a library developed by facebook, which contains useful tools for NLP. In particular, I exploited its pre-trained Italian word embedding model to derive the absolute value of the cosine similarity between the vector representation of two given words: $S(x,y)$ indicates this similarity measure, where x,y are the vectorial representation of 2 words.  
 I took the absolute value to bound the metric in [0,1], since for this purpose it is more important to find out *how strongly* two words are related, rather than *how* they are.
 
 This algorithm requires the definition of the topics to which the texts are assigned. I used single words to define a topic, but it is easy to generalize the method to accept a list of words to better represent a topic.  
 The topics that i've defined for these data are: 'amore', 'dio', 'natura', 'politica', 'morte', 'guerra'.    
-Since the similarity measure takes 2 words as inputs, you have to decide which words of each document(lyrics) have to be choosen to calculate it. The words that best represent the topics covered in a text are the NOUNs, which were extracted from each lemmatized text. One can choose to include other part of speech like ADJs or VERBs.   
+Since the similarity measure takes 2 words as inputs, you have to decide which words of each document (lyrics) have to be choosen to calculate it. The words that best represent the topics covered in a text are the NOUNs, which were extracted from each lemmatized text. One can choose to include other part of speech like ADJs or VERBs.   
 In the final version of the script i used only the 10 most common NOUNs in each song, but the results are very similar.
 
 #### FastText Classification Algorithm.
@@ -81,7 +81,7 @@ This notation signifies that we find the topic $t_k$ that maximizes the sum of s
 
 The terms $w_j$, $w_k$  $\in [0,1]$ refer to a metric called **Inverse popularity**:  
 Popularity of a word represents how common the word is within the language.   
-Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates the number of different meanings and context in which the word can be used) in the dataset used to train the embedding model. 
+Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates the number of different meanings and context in which the word is used) in the dataset used to train the embedding model. 
 Under the assumption that the words distribution in the datset is consisent with the words distribution in the language, we have that $P(S(c,x) > S(n,x))$ is probable for each x $\in$ X even if we can't directly recognize semantic or lexical link between $c$ and $x$.    
 In other words, S(x,y) inherently tends to calculate a higher similarity score when a common word is involved. This bias leads the algorithm to frequently assign documents to topics represented by the most common term. 
 
@@ -153,8 +153,8 @@ I did not use data augumentaion techniques, since the structure of a song is ext
 
 The solution I found uses a Masked Language Model(MLM). It did not achieved satisfactory results in absolute terms, but they are the best I was able to obtain from these data. 
 
-A Masked laungage model takes as input a string 'evaporato in una nuvola rossa' where one of the word is masked by a special token *[MASK]* -> 'evaporato in una [MASK] rossa'. The task of this class of models is to predict the word masked by [MASK]. 'nebbia', 'bottiglia', 'nuvola', 'notte', for example.  
-my idea is to sequentially use an MLM on a verse, to iteratively modify it according to the replacements suggested by a fine-tuned MLM model.
+A Masked laungage model takes as input a string 'evaporato in una nuvola rossa' where one of the word is masked by a special token -> 'evaporato in una [MASK] rossa'. The task of this class of models is to predict the word masked by [MASK]. 'nebbia', 'bottiglia', 'nuvola', 'notte', for example.  
+My idea is to sequentially use an MLM on a verse, to iteratively modify it according to the replacements suggested by a fine-tuned MLM model.
 
 #### Training. 
 I used the [BERT for MLM -'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as basis.  
@@ -170,7 +170,7 @@ The dataset was built by sequentially replacing each word of each verse with the
  'evaporato in una [MASK] rossa'
  'evaporato in una nuvola [MASK]'|
 
-the label associated to these inputs was the complete verse 'evaporato in una nuvola rossa'.
+The label associated to these inputs was the complete verse 'evaporato in una nuvola rossa'.
 
 The dataset has been used to fine-tune the MLM BERT model. One can even filter the data by the topic defined before, but this will reduce the cardinality of the set.
 
@@ -186,15 +186,15 @@ Assume a verse of an author (ideally, a different author drom the one used in th
 5. The process is repeated iteratively for each element in the verse
 6. Repeat the process for each verse in the song
 
-Regarding the point 3: an interesting feature of MLM_BERT is that it allows you to extract the dictionary words-probabilities taken into account to replace the [MASK]. I have exploited this feature to bound the choice to the word with the higher probability, of the same POS of the masked element. This could lead to problems since the POS is determinated even by the context (i.e 'sale' could be NOUN or VERB), but it is useful to provide more 'structure' and simplify the process. 
+Regarding the point 3: an interesting feature of MLM_BERT is that it allows you to extract the dictionary words-probabilities taken into account to replace the [MASK]. I have exploited this feature to bound the choice of the word, to the one with the higher probability of the same POS of the masked element:   
+'evaporato in una [MASK] rossa', since 'nuvola' is a NOUN, the model will select from the dictionary the NOUN with the higher probability.  
+This could lead to problems since the POS is determinated even by the context (i.e 'sale' could be NOUN or VERB), but it is useful to provide more 'structure' 
+ to the process. 
 
 In general, this procedure has the advantage of exploiting MLM_BERT to iteratively fill the masked words, in doing so, at each step it manages to capture the context of the input-verse and modify it following what it has learned during the fine tuning. On the other hand, it is not capable to manage the rhymes structure, since it is trained on verse-level.
 
 **advanced method**:
-The following method cannot be applied to the lyric-model, because of how the functions are constructed that it.  
-
-In order to try to overcome the rhyme problem, i've used the Rhyme Model defined above to extract the rhyme structure of the chosen song, that is a list like [0,1,0,1,2,3,2,3].  
-Remember that the rhyme model is not perfect, thus it can build misleading rhyme schemas.  
+In order to try to overcome the rhyme problem, i've used the Rhyme Model defined above to extract the rhyme structure of the chosen song.   
 I've used the rhyme structure to bound the exctraction of the last word of each verse to a word that rhyme accordingly to the structure. Unfortunately, the number of 'meaningful' possible replacement is limited and it is difficult to find a word with the desired characteristics.
 
 Here 2 examples of results provided by the simple and complex method, using the simple MLM BERT Model.  
@@ -260,12 +260,44 @@ Here you can see that the advanced model was able to replicate the rhyme schema 
 Moreover there is some word that, probably is not recognized by the tokenizer 'raccol e m', 'e con la cu'. But on the other hand there are meaningful verses: 
 *'ma in questa città dove non passa più la notte / non so provare ad essere cattivo* or *io non chiedo mai perdono ma amore* 
 
+Last example: A comparison of fine-tuned simple model on Guccini and fine-tuned simple model on De André (original song: Illogica Allegria - Gaber).  
 
+Guccini 'traslation':
 
+ | |
+|---|
+| [...] |
+|da lontano
+lungo l
+alle chiaro luci del giorno
+a volte fa male la testa
+e senti il tuo viso passare sopra ride
+io parlava di canzoni e molto del vino
+lo senti che ti senti in mente
+ma a volte
+mentre la notte cade
+al suo strano profumo| 
+| [...] |
 
+De André 'traslation':
+
+ | |
+|---|
+| [...] |
+|da solo
+lungo l
+alle prime ore del mattino
+a volte suona ancora la chitarra
+e vedo il mio cuore venire dal pianto
+ne va del mondo e poi del mondo
+lo sai che si muore in battaglia
+ma di dolore
+mentre la regina piange
+del tuo profondo dolore| 
+| [...] |
+
+It seems that the De André model perform better since it changes completely some verses ('a volte spengo anche la radio'-> 'a volte suona ancora la chitarra'), in a way that can (distantly) resemble his Style.
  
-
-
 
 
 
