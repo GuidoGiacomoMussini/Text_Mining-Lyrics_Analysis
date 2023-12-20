@@ -145,9 +145,9 @@ For the future it may be interesting to develop this aspect by enriching the dat
 ## 5 Masked Language Models
 The functions related to this script are in the MLM_Utils.py files
 
-As mentioned above, the initial objective of this work was to try to generate lyrics following the style of a certain author, in order to try to rewrite a song by author A, following the style of songwriter B.  
+*As mentioned above, the initial objective of this work was to try to generate lyrics following the style of a certain author, in order to try to rewrite a song by author A, following the style of songwriter B.  
 In the first part of this discussion i've altready mentioned the 'POS to TEXT' translation model that wasn't able to provide any significant result.  
-Another model that i've tried to implemet follows a similar logic: the idea was to train a trasformer to 'translate' a lemmatized (and after stopwords removal) text to a normal text, for example: 'binario stare locomotiva' -> 'e sul binario stava la locomotiva', trying to capture the way in which a given author composes the phrases, but i did not have sufficient examples to obtain meaningful results. 
+Another model that i've tried to implemet follows a similar logic: the idea was to train a trasformer to 'translate' a lemmatized (and after stopwords removal) text to a normal text, for example: 'binario stare locomotiva' -> 'e sul binario stava la locomotiva', trying to capture the way in which a given author composes the phrases, but i did not have sufficient examples to obtain meaningful results.*
 
 I did not use data augumentaion techniques, since the structure of a song is extremely specific, changing one part of it could distort the structure.
 
@@ -159,7 +159,7 @@ my idea is to sequentially use an MLM on a verse, to iteratively modify it accor
 #### Training. 
 I used the [BERT for MLM -'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as basis.  
 Then i've selected and extracted all the verses of all of the songs by a given author.   
-I had to work at verse-level since i didn't have evidence of the strophe for all the lyrics, and it was computationally too costly work at lyric-level. Which means that the model is not able to caputure the general structure of a song.  
+I worked for the most at verse-level since i didn't have evidence of the strophe for all the lyrics and it was computationally costly to work at lyric-level: I trained a model directly on the lyrics, but i had to impose the encoding limit to 100 tokens and it provided very poor results.
 
 The dataset was built by sequentially replacing each word of each verse with the special token, for example: 
  | |
@@ -191,17 +191,19 @@ Regarding the point 3: an interesting feature of MLM_BERT is that it allows you 
 In general, this procedure has the advantage of exploiting MLM_BERT to iteratively fill the masked words, in doing so, at each step it manages to capture the context of the input-verse and modify it following what it has learned during the fine tuning. On the other hand, it is not capable to manage the rhymes structure, since it is trained on verse-level.
 
 **advanced method**:
+The following method cannot be applied to the lyric-model, because of how the functions are constructed that it.  
+
 In order to try to overcome the rhyme problem, i've used the Rhyme Model defined above to extract the rhyme structure of the chosen song, that is a list like [0,1,0,1,2,3,2,3].  
 Remember that the rhyme model is not perfect, thus it can build misleading rhyme schemas.  
 I've used the rhyme structure to bound the exctraction of the last word of each verse to a word that rhyme accordingly to the structure. Unfortunately, the number of 'meaningful' possible replacement is limited and it is difficult to find a word with the desired characteristics.
 
-Here 2 examples of results provided by the simple and complex method, using a model fine-tuned on Guccini.  
+Here 2 examples of results provided by the simple and complex method, using the simple MLM BERT Model.  
 (Original song: Un matto - Fabrizio De André)
  | |
 |---|
 | [...] |
 |Ma per sapere a chi spetta la pensione
-In un mese te ne fai
+In un mese te ne fa
 Qui in città parecchi anni
 Non ce traccia nemmeno nei miei occhi
 Ora in scena non trovate parole
@@ -220,6 +222,46 @@ E ha la luce la luce del sole|
 | [...] |
 
 It can be observed that the two texts are similar. Many verses have internal logic but obviously lack textual consistency. The use of the rhyme structure worked in the third and fourth verses of the second table, which are different from their counterparts in the first one. (the original verses are: 'qui sulla collina dormo malvolentieri / eppure c'è luce ormai nei nei miei pensieri')
+
+Another example, using a model fine-tuned on De André (original song: Cyrano-Francesco Guccini)
+
+ | |
+|---|
+| [...] |
+|le anime lasciate sulla strada dai cani
+lascio le mani muove le dita
+andate a caval leva veloce indietro
+per la tua barba lunga ti sembrano giganti
+ai dubbi e ai sogni di domani non credete
+e in fin di vita io poi raccol e pe
+io non chiedo mai perdono ma amore
+io cerch i miei occhi col coltello e con la pietra
+ma in questa città dove non passa più la notte
+non so provare ad essere felice| 
+| [...] |
+
+
+ | |
+|---|
+| [...] |
+|le anime lasciate sulla strada dai criminali
+lascio le mani muove le ali
+andate a caval leva veloce indietro
+per la tua barba lunga ti sembrano pietà
+ai dubbi e ai sogni di domani non credete
+e in fin di vita io poi raccol e m
+io non chiedo mai perdono ma amore
+io cerch i miei occhi col coltello e con la cu
+ma in questa città dove non passa più la notte
+non so provare ad essere cattivo| 
+| [...] |
+
+Here you can see that the advanced model was able to replicate the rhyme schema (A,A,B,B,C,C,C,D,D,E..) only for the first 2 verses.   
+Moreover there is some word that, probably is not recognized by the tokenizer 'raccol e m', 'e con la cu'. But on the other hand there are meaningful verses: 
+*'ma in questa città dove non passa più la notte / non so provare ad essere cattivo* or *io non chiedo mai perdono ma amore* 
+
+
+
 
  
 
