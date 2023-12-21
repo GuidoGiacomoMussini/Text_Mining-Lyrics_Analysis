@@ -124,7 +124,7 @@ One aspect that deserves attention in this context is the impossibility of creat
 
 In this regard, it may be interesting to read the results obtained (On the script).  
 It can be observed that the most similar songs were identified in dialect songs, probably due to problems in the handling of such words by the embedding model.  
-The other first places, however, are occupied by songs about faith, topic which, before adding popularity, i have seen to be the one that generates the most bias in the similarity calculation.
+The other first places, however, are occupied by songs that contain words regarding the topic "faith"(e.g Coda di Lupo-Dio è morto), which i have seen to be the one that generates the most bias in the similarity calculation, before adding popularity to the algorithm.
 
 It might be interesting to try to adapt the method to handle the similarity calculation more precisely, perhaps trying to find an alternative way in defining the weights.
 
@@ -161,7 +161,7 @@ The solution I found uses a Masked Language Model(MLM). It did not achieved sati
 A Masked laungage model takes as input a string 'evaporato in una nuvola rossa' where one of the word is masked by a special token -> 'evaporato in una [MASK] rossa'. The task of this class of models is to predict the word masked by [MASK]. 'nebbia', 'bottiglia', 'nuvola', 'notte', for example.  
 My idea is to sequentially use an MLM on a verse, to iteratively modify it according to the replacements suggested by a fine-tuned MLM model.
 
-#### Training. 
+#### Training
 I used the [BERT for MLM -'bert-base-italian-xxl-cased'](https://huggingface.co/dbmdz/bert-base-italian-xxl-cased) model as basis.  
 Then i've selected and extracted all the verses of all of the songs by a given author.   
 I worked for the most at verse-level since i didn't have evidence of the strophe for all the lyrics and it was computationally costly to work at lyric-level: I trained a model directly on the lyrics, but i had to impose the encoding limit to 100 tokens and it provided very poor results.
@@ -184,6 +184,7 @@ The generation of text is an iterative process, i've defined a base method and a
 Assume a verse of an author (ideally, a different author drom the one used in the fine-tuning), i.e: 'ma se io avessi previsto tutto questo'.
 
 **base method** : 
+
 1. Select a song
 2. The first step is to mask the first element: phrase_1 = '[MASK] se io avessi previsto tutto questo'
 3. phrase_1 is the input of the MLM BERT model, which returns, for example: phrase_2 ='e se io avessi previsto tutto questo' 
@@ -198,7 +199,8 @@ This could lead to problems since the POS is determinated even by the context (i
 
 In general, this procedure has the advantage of exploiting MLM_BERT to iteratively fill the masked words, in doing so, at each step it manages to capture the context of the input-verse and modify it following what it has learned during the fine tuning. On the other hand, it is not capable to manage the rhymes structure, since it is trained on verse-level.
 
-**advanced method**:
+**advanced method**:  
+
 In order to try to overcome the rhyme problem, i've used the Rhyme Model defined above to extract the rhyme structure of the chosen song.   
 I've used the rhyme structure to bound the exctraction of the last word of each verse to a word that rhyme accordingly to the structure. Unfortunately, the number of 'meaningful' possible replacement is limited and it is difficult to find a word with the desired characteristics.
 
@@ -262,7 +264,7 @@ non so provare ad essere cattivo|
 | [...] |
 
 Here you can see that the advanced model was able to replicate the rhyme schema (A,A,B,B,C,C,C,D,D,E..) only for the first 2 verses.   
-Moreover there is some word that, probably is not recognized by the tokenizer 'raccol e m', 'e con la cu'. But on the other hand there are meaningful verses: 
+Moreover there is some word that probably is not recognized by the tokenizer 'raccol e m', 'e con la cu'. On the other hand there are meaningful verses: 
 *'ma in questa città dove non passa più la notte / non so provare ad essere cattivo* or *io non chiedo mai perdono ma amore* 
 
 Last example: A comparison of fine-tuned simple model on Guccini and fine-tuned simple model on De André (original song: Illogica Allegria - Gaber).  
