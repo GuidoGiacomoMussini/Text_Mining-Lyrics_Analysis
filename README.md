@@ -4,11 +4,11 @@ Text mining course project.
 The initial aim of this work was to 'extract the style' of italian songwriters and rewrite famous songs following that specific writing style. 
 
 The major challenges for this task were: 
-* The lack of data. In fact, the songwriters considered composed about 120 songs during their careers, offering different styles and topics. 
-* The lack of models, pre-trained specifically on the italian language, on which perform fine-tuning for the generation of decent lyrics, given the previous point.
+* The lack of data. In fact, the considered songwriters composed about 120 songs during their careers, offering different styles and topics.
 * The complexity and numerosity of the vocabulary used by these authors, in relation to the number of songs produced.
+* The lack of models, pre-trained specifically on the italian language, on which perform fine-tuning for the generation of decent lyrics, given the previous point.
 
-A brief explanation of all the files in this repository follows
+A brief explanation of all the files in this repository follows.
 
 ## 1-Lyrics retrieval
 This script exploit [the Genius API](https://genius.com/api-clients) to get the Lyrics. The data consists of the 120 most popular songs by 4 artists: Fabrizio De André, Giorgio Gaber, Francesco Guccini, Claudio Lolli. Free subscription to this API allows a limited number of monthly requests, but it is sufficient to get the data.
@@ -27,39 +27,42 @@ The second one, a transformer model capable of translating a sequence of POS int
 Thus, the idea was to use the syntax of one author and the semantics of the other. Unfortunately the models provided very poor results.*
 
 #### Lyrics preprocessing
-First of all, the lyrics obtained by Genius contained comments (i.e the phrase '*you might also like*' in the middle of almost each song) and headers that have to be removed. Here an example: 
+First of all, the lyrics obtained by Genius contained comments (i.e the phrase '*you might also like*' in the middle of almost each song) and headers that had to be removed. Here an example: 
 
-*10 ContributorsCoda di Lupo Lyrics[Testo di "Coda di lupo"] [Strofa 1] Quando ero piccolo m'innamoravo di tutto, correvo dietro ai cani E da marzo a febbraio mio nonno vegliava Sulla corrente di cavalli e di buoi Sui fatti miei e sui fatti tuoi E al dio degli inglesi non credere mai [Strofa 2] [...] You might also like[Strofa 5] Poi tornammo in Brianza per l'apertura della caccia al bisonte [...] e a un dio E a un dio E a un dio senza fiato non credere maiEmbed*
+*"10 ContributorsCoda di Lupo Lyrics[Testo di "Coda di lupo"] [Strofa 1] Quando ero piccolo m'innamoravo di tutto, correvo dietro ai cani E da marzo a febbraio mio nonno vegliava Sulla corrente di cavalli e di buoi Sui fatti miei e sui fatti tuoi E al dio degli inglesi non credere mai [Strofa 2] [...] You might also like[Strofa 5] Poi tornammo in Brianza per l'apertura della caccia al bisonte [...] e a un dio E a un dio E a un dio senza fiato non credere maiEmbed"*
 
 After the processing:  
-*Quando ero piccolo m\'innamoravo di tutto, correvo dietro ai cani/  E da marzo a febbraio mio nonno vegliava/  Sulla corrente di cavalli e di buoi/  Sui fatti miei e sui fatti tuoi/  [...]  Poi tornammo in  Brianza per l\'apertura della caccia al bisonte/ [...] E a un dio senza fiato non credere mai*
+*"Quando ero piccolo m\'innamoravo di tutto, correvo dietro ai cani/  E da marzo a febbraio mio nonno vegliava/  Sulla corrente di cavalli e di buoi/  Sui fatti miei e sui fatti tuoi/  [...]  Poi tornammo in  Brianza per l\'apertura della caccia al bisonte/ [...] E a un dio senza fiato non credere mai"*
 
 #### Outliers
 The next step was to remove songs containing 'outlier verses' which are nothing more than pieces of prose within songs (common in Gaber). This procedure removed around 40 songs.
 
 #### Text Preprocessing
-In this section i've removed punctuation, uppercase, non-ASCII characters, and songs written in a foreign language or dialect (common in De André). This last step was not entirely successful; All the methods attempted failed expecially in deleting dialet songs. In the end, I decided to use [langdetect](https://pypi.org/project/langdetect/).
+In this section i've removed punctuation, uppercase, non-ASCII characters, and songs written in a foreign language or dialect (common in De André). This last step was not entirely successful; All the methods attempted failed expecially in deleting dialet songs. In the end, the library that provided the best results was [langdetect](https://pypi.org/project/langdetect/).
 
 After these steps, i obtained:   
-*quando ero piccolo m'innamoravo di tutto correvo dietro ai cani/ e da marzo a febbraio mio nonno vegliava/ sulla corrente di cavalli e di buoi/ sui fatti miei e sui fatti tuoi*,
-where '/' is the symbol used to divide the verses.
+*"quando ero piccolo m'innamoravo di tutto correvo dietro ai cani/ e da marzo a febbraio mio nonno vegliava/ sulla corrente di cavalli e di buoi/ sui fatti miei e sui fatti tuoi"*,
+where '/' is the symbol used to divide the lyrics by verses.
 
-To conclude this part, i've created another column in the dataset, containing the lyrics after the stopwords removal and the text lemmatization. This column is used in the 'Topic Detection' Section.
+To conclude this part, i've created another column in the dataset, containing the lyrics after the stopwords removal (with [NLTK](https://www.nltk.org/search.html?q=stopwords)) and the text lemmatization (with [Spacy](https://spacy.io/api/lemmatizer)). This column is used in the 'Topic Detection' Section.
 
 #### Divina Commedia Preprocessing. 
 The data is taken by (http://it.wikisource.org). 
 
 This text was used to train a classification algorithm to recognize whether two words rhyme with each other. The Divina Commedia was chosen because it is a very extensive text, about 14,000 verses, and the rhyme structure is well known.  
 In this part, the text has been cleaned as the lyrics: comments, punctuation and non-ASCII symbols were removed.  
-Then, the dataset used to train the classification algorithm was built: it has 2 columns, the first one contains the last word of each verse, the other one contains a numerical indication for the rhyme strucutre: ABA BCB CDC -> 010 121 232.
+Then, the dataset used to train the classification algorithm was built: it has 2 columns, the first one contains the last word of each verse, the other one contains a numerical indication for the rhyme strucutre: ABA BCB CDC -> 010 121 232.  
+Further details in section 4.
 
 ## 3-Topic Detection
 The functions related to this script are in the topic_detection.py file.
 
-In this section, i have tried to cluster the songs with respect to the main topic covered. Initially, the idea was to further specialize the model to generate a song according to both an author's style and the topic covered.    
+In this section, I have tried to cluster the songs with respect to the main topic covered. Initially, the idea was to further specialize the model to generate a song according to both an author's style and the topic covered.    
 The most common method to perform this taks, is the Latent Dirichlet Allocation (LDA), however, in this particular case this solution did not produce significant results. Moreover I didn't have any labels regarding the topics, so I couldn't use any supervised algorithm.  
-To overcome this problem, I defined my own topic classification algorithm. The algorithm is based on the concept of [FastText](https://fasttext.cc/) similarity. FastText is a library developed by facebook, which contains useful tools for NLP. In particular, I exploited its pre-trained Italian word embedding model to derive the absolute value of the cosine similarity between the vector representation of two given words: $S(x,y)$ indicates this similarity measure, where x,y are the vectorial representation of 2 words.  
-I took the absolute value to bound the metric in [0,1], since for this purpose it is more important to find out *how strongly* two words are related, rather than *how* they are.
+
+To overcome this problem, I defined my own topic clustering algorithm. The algorithm is based on the concept of **FastText similarity**:  
+[FastText](https://fasttext.cc/) is a library developed by facebook, which contains useful tools for NLP. In particular, I exploited its pre-trained Italian word embedding model to derive the absolute value of the cosine similarity between the vector representation of two given words: $S(x,y)$ indicates this similarity measure, where x,y are the vectorial representation of 2 words.  
+I took the absolute value to bound the metric in [0,1], since for this purpose it is more important to find out *how strongly* two words are related, rather than *in what way* they are related.
 
 This algorithm requires the definition of the topics to which the texts are assigned. I used single words to define a topic, but it is easy to generalize the method to accept a list of words to better represent a topic.  
 The topics that i've defined for these data are: 'amore', 'dio', 'natura', 'politica', 'morte', 'guerra'.    
@@ -81,15 +84,17 @@ This notation signifies that we find the topic $t_k$ that maximizes the sum of s
 
 The terms $w_j$, $w_k$  $\in [0,1]$ refer to a metric called **Inverse popularity**:  
 Popularity of a word represents how common the word is within the language.   
-Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates the number of different meanings and context in which the word is used) in the dataset used to train the embedding model. 
+Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates the number of different meanings and context in which the word is used) in the dataset used to train the embedding model.  
 Under the assumption that the words distribution in the datset is consisent with the words distribution in the language, we have that $P(S(c,x) > S(n,x))$ is probable for each x $\in$ X even if we can't directly recognize semantic or lexical link between $c$ and $x$.    
 In other words, S(x,y) inherently tends to calculate a higher similarity score when a common word is involved. This bias leads the algorithm to frequently assign documents to topics represented by the most common term. 
 
 To counteract this effect, the algorithm derives the *inverse popularity* coefficient $w_t$ for each topic t in T, defined as: $$w_t ∝  (\sum_{i=1}^{|L|} S(l_i, t_t))^{-1}$$ 
-Here, $L$ is the list of each chosen word $l$ across all documents. This coefficeint is in fact proportional to the inverse of how 'popular' is the word representing the topic in the set of documents. Therefore, the most *popular* topics are penalized in the algorithm.  
-*Note that each $w_t$ is in percentage, based on the sum of all the w_t in T. Tt follows that as |T| increases, each $w_t$ decreases.*
+Here, $L$ is the list of each chosen word $l$ across all documents. This coefficeint is in fact proportional to the inverse of how 'popular' is the topic in the set of documents. Therefore, the most *popular* topics are penalized in the algorithm.  
+A better and more general way to calculate this metric would be to derive it from the entire corpus of documents used to train the embedding model, as deriving it from the dataset on which the algorithm will be used will generate some bias in the coefficients.  
+Note that each $w_t$ is in percentage, based on the sum of all the $w_t$ in T. It follows that as |T| increases, each $w_t$ decreases.  
 
-For example, the popularity of topics in my lyrics is:
+
+For example, the topics popularity in my lyrics is:
  | |
 |---|
 |'dio': 0.32,
