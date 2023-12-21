@@ -264,7 +264,7 @@ non so provare ad essere cattivo|
 | [...] |
 
 Here you can see that the advanced model was able to replicate the rhyme schema (A,A,B,B,C,C,C,D,D,E..) only for the first 2 verses.   
-Moreover there is some word that probably is not recognized by the tokenizer 'raccol e m', 'e con la cu'. On the other hand there are meaningful verses: 
+Moreover there is some word that probably is misinterpreted by the tokenizer: 'raccol e m', 'e con la cu'. On the other hand there are meaningful verses: 
 *'ma in questa città dove non passa più la notte / non so provare ad essere cattivo* or *io non chiedo mai perdono ma amore* 
 
 Last example: A comparison of fine-tuned simple model on Guccini and fine-tuned simple model on De André (original song: Illogica Allegria - Gaber).  
