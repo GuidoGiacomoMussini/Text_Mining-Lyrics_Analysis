@@ -78,13 +78,13 @@ The algorithm involves calculating the similarity between each word $a_i$ in $A$
 
 Mathematically, this can be expressed as:
 
-$$t_k = \underset{t_j \in T}{\arg \max} \sum_{i=1}^{|A|} S(a_i, t_j)w_j > \sum_{i=1}^{|A|} S(a_i, t_k)w_k$$
+$$t_k = \underset{t_j \in T}{\arg \max} \sum_{i=1}^{|A|} S(a_i, t_j)w_j $$
 
-This notation signifies that we find the topic $t_k$ that maximizes the sum of similarities between $t_k$ and all words in $A$, ensuring it is greater than the sum of similarities between all the other topics $t_j$ and all words in $A$ for any $t_j$ in $T$ excluding $t_k$.
+This notation signifies that we find the topic $t_k$ that maximizes the sum of similarities between $t_k$ and all words in $A$, ensuring it is greater than the sum of similarities between all the other topics $t_j$ and all words in $A$ for any $t_j$ in $T$.
 
-The terms $w_j$, $w_k$  $\in [0,1]$ refer to a metric called **Inverse popularity**:  
+The term $w_j$ $\in [0,1]$ refer to a metric called **Inverse popularity**:  
 Popularity of a word represents how common the word is within the language.   
-Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates the number of different meanings and context in which the word is used) in the dataset used to train the embedding model.  
+Let $X$ represent a random variable that randomly pick a word from a language, $c$ a common word and $n$ a less common word, where *common* refers to the word frequency (where frequency here indicates even the number of different meanings and context in which the word is used) in the dataset used to train the embedding model.  
 Under the assumption that the words distribution in the datset is consisent with the words distribution in the language, we have that $P(S(c,x) > S(n,x))$ is probable for each x $\in$ X even if we can't directly recognize semantic or lexical link between $c$ and $x$.    
 In other words, S(x,y) inherently tends to calculate a higher similarity score when a common word is involved. This bias leads the algorithm to frequently assign documents to topics represented by the most common term. 
 
@@ -97,24 +97,23 @@ Note that each $w_t$ is in percentage, based on the sum of all the $w_t$ in T. I
 For example, the topics popularity in my lyrics is:
  | |
 |---|
-|'dio': 0.32,
- 'amore': 0.186,
- 'morte': 0.162,
- 'guerra': 0.124,
- 'natura': 0.123,
- 'politica': 0.085|
+|'amore': 0.197,
+ 'morte': 0.170,
+ 'ntura': 0.166,
+ 'politica': 0.162,
+ 'guerra': 0.155,
+ 'dio': 0.150|
  
 An interesting aspect of this procedure is that it allows the extraction of the 'percentage belonging' of a text to each topic. This shows how much a text is related to a single topic or whether it range between different topics. For example, the topic distribution for the song 'Il testamento di Tito' is: 
  | |
 |---|
-|'dio': 0.206,
- 'amore': 0.18,
- 'morte': 0.176,
- 'natura': 0.154,
- 'guerra': 0.147,
- 'politica': 0.136|
+|'dio': 0.190,
+ 'morte': 0.177,
+ 'amore': 0.167,
+ 'guerra': 0.162,
+ 'natura': 0.161,
+ 'politica': 0.143|
 
- Note that even if 'dio' is the most penalized topic, the song were in any case assigned to it (and it is perfectly justified).
 
 #### Song Similarity
 Theoretically, the same logic can be adapted to find the most similar songs:    
@@ -123,8 +122,10 @@ Here, it is important to consider the same number of words for each song: the al
 One aspect that deserves attention in this context is the impossibility of creating popularity weights. Since the 'topics' are every possible word in the whole set of songs, the popularity coefficient of each word would be flattened to zero by the cardinality of the set, making the inverse popularity-weights to tend to infinity by contrast. 
 
 In this regard, it may be interesting to read the results obtained (On the script).  
-It can be observed that the most similar songs were identified in dialect songs, probably due to problems in the handling of such words by the embedding model.  
-The other first places, however, are occupied by songs that contain words regarding the topic "faith"(e.g Coda di Lupo-Dio è morto), which i have seen to be the one that generates the most bias in the similarity calculation, before adding popularity to the algorithm.
+It can be observed that the most similar songs were identified in pairs in which there is at least one love song (i.e. la stagione del tuo amore). This result is consistent with the previous findings, since 'amore' is the topic associated with the highest pupularity score.  
+An interesting result is the third place (Preghiera in gennaio - Cristoforo Colombo), since these 2 songs don't have any specific reference to the 'love' area.
+
+The lasts position are occupied by short songs or dialect songs (for which, probably, Spacy can't tag correctly the NOUNs), showing the balancing problem.
 
 It might be interesting to try to adapt the method to handle the similarity calculation more precisely, perhaps trying to find an alternative way in defining the weights.
 
