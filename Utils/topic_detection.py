@@ -48,6 +48,12 @@ def common_words(words, top):
   return [word for word, count in most_common_words]
 
 
+def cosine_similarity(a, b): 
+  vector_a = similarity_model.get_word_vector(a)
+  vector_b = similarity_model.get_word_vector(b)
+  return np.dot(vector_a, vector_b) / (np.linalg.norm(vector_a) * np.linalg.norm(vector_b))
+
+
 def percentage_weight(dict_):
   '''
   convert the values of a dict in percentages of sum(values)
@@ -66,6 +72,7 @@ def sort_dict(dict_, reverse = True):
 
 
 def find_topic_similarity(topics, word_list, weight = False, normalize = True):
+
   '''
   sum the similaritis between each noun in a song and topic.
   If weight = True, the similarity is weighted by a measure that penalize
@@ -83,8 +90,8 @@ def find_topic_similarity(topics, word_list, weight = False, normalize = True):
 
     #derive the sum of the similarity between each word in a song and a given topic
     for word in word_list:
-      #note that all the embedding vectors have the same len, therefore i don't divide the scalar product by ||A||*||B||, it is useless in this context.
-      similarity += np.abs((similarity_model.get_word_vector(word) @ similarity_model.get_word_vector(topic)))/(w)
+      
+      similarity += np.abs(cosine_similarity(word, topic))/(w)
 
     similarity_dict[topic] = similarity #feed the dict
 
@@ -99,9 +106,6 @@ def find_topic_similarity(topics, word_list, weight = False, normalize = True):
 
 
 def find_popularity(topics, vocabulary):
-  '''
-  derive the popularity score in the vocabulary, for each topic
-  '''
   #unique words  --> you can choose to count each word in the set only once, but that will further penalize the common words
   #vocabulary = list(set(vocabulary))
 
